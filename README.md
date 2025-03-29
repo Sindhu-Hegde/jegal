@@ -5,7 +5,7 @@ This code is for our paper titled: **Understanding Co-speech Gestures in-the-wil
 
 |   📝 Paper   |   📑 Project Page    |  📦 AVS-Spot Dataset | 🛠 Demo  | 
 |:-----------:|:-------------------:|:------------------:|:------------------:|
-| [Paper]() | [Website](https://www.robots.ox.ac.uk/~vgg/research/jegal/) | [Dataset] (https://huggingface.co/datasets/sindhuhegde/avs-spot) | Coming soon | 
+| [Paper]() | [Website](https://www.robots.ox.ac.uk/~vgg/research/jegal/) | [Dataset](https://huggingface.co/datasets/sindhuhegde/avs-spot) | Coming soon | 
 <br />
 
 <p align="center">
