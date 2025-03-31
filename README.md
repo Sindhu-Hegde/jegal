@@ -5,7 +5,7 @@ This code is for our paper titled: **Understanding Co-speech Gestures in-the-wil
 
 |   📝 Paper   |   📑 Project Page    |  📦 AVS-Spot Dataset | 🛠 Demo  | 
 |:-----------:|:-------------------:|:------------------:|:------------------:|
-| [Paper]() | [Website](https://www.robots.ox.ac.uk/~vgg/research/jegal/) | [Dataset](https://huggingface.co/datasets/sindhuhegde/avs-spot) | Coming soon | 
+| [Paper](https://arxiv.org/abs/2503.22668) | [Website](https://www.robots.ox.ac.uk/~vgg/research/jegal/) | [Dataset](https://huggingface.co/datasets/sindhuhegde/avs-spot) | Coming soon | 
 <br />
 
 <p align="center">
@@ -16,41 +16,13 @@ We present **JEGAL**, a Joint Embedding space for Gestures, Audio and Language. 
 
 ## News 🚀🚀🚀
 
-- **[2025.03.29]** 🔥 Our new gesture-spotting dataset: **AVS-Spot** has been released!
+- **[2025.03.31]** 🔥 The paper has been released on arXiv.
+- **[2025.03.29]** 🤗 Our new gesture-spotting dataset: **AVS-Spot** has been released!
 
 
 ## Dataset
 
-```bash
-# Switch to the dataset folder
-cd dataset
-
-# Download the videos from YouTube-ids and timestamps
-python download_videos.py --file=avs_spot.csv --video_root=<dataset-path>
-
-# Obtain the crops with the target speaker (this step will take some time)
-python preprocess_videos.py --file=avs_spot.csv --data_root=<dataset-path> --preprocessed_root=<path-to-save-the-preprocessed-data> --merge_dir=<path-to-save-audio-video-merged-results> --temp_dir=<path-to-save-intermediate-results> --metadata_root=<path-to-save-the-metadata>
-```
-
-Once the dataset is downloaded and pre-processed, the structure of the folders will be as follows:
-
-```
-video_root (path of the downloaded videos) 
-├── *.mp4 (videos)
-```
-    
-```
-preprocessed_root (path of the pre-processed videos) 
-├── list of video-ids
-│   ├── *.avi (extracted person track video for each sample)
-|	├── *.wav (extracted person track audio for each sample)
-```
-
-```
-merge_dir (path of the merged videos) 
-├── *.mp4 (target-speaker videos with audio)
-```
-
+AVS-Spot is a **gestured word-spotting** dataset. Refer to [🤗](https://huggingface.co/datasets/sindhuhegde/avs-spot) and [dataset section](https://github.com/Sindhu-Hegde/jegal/tree/main/dataset) for details on downloading and pre-processing the data.
 
 
 ## Updates
