@@ -47,4 +47,4 @@ merge_dir (path of the merged videos)
 ```
 
 
-AVS-Spot dataset is also hosted on [🤗](https://huggingface.co/datasets/sindhuhegde/avs-spot). For further exploration, please check the 🤗 page.
+AVS-Spot dataset is also hosted on [🤗 datasets](https://huggingface.co/datasets/sindhuhegde/avs-spot). For further exploration, please check the 🤗 page.
