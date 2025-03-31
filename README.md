@@ -16,7 +16,7 @@ We present **JEGAL**, a Joint Embedding space for Gestures, Audio and Language. 
 
 ## News 🚀🚀🚀
 
-- **[2025.03.31]** 🔥 The paper has been released on arXiv.
+- **[2025.03.31]** 🔥 The paper has been released on [arXiv](https://arxiv.org/abs/2503.22668).
 - **[2025.03.29]** 🤗 Our new gesture-spotting dataset: **AVS-Spot** has been released!
 
 
