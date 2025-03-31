@@ -22,7 +22,7 @@ We present **JEGAL**, a Joint Embedding space for Gestures, Audio and Language. 
 
 ## Dataset
 
-AVS-Spot is a **gestured word-spotting** dataset. Refer to [🤗](https://huggingface.co/datasets/sindhuhegde/avs-spot) and [dataset section](https://github.com/Sindhu-Hegde/jegal/tree/main/dataset) for details on downloading and pre-processing the data.
+AVS-Spot is a **gestured word-spotting** dataset. Refer to [🤗 datasets](https://huggingface.co/datasets/sindhuhegde/avs-spot) and [dataset section](https://github.com/Sindhu-Hegde/jegal/tree/main/dataset) for details on downloading and pre-processing the data.
 
 
 ## Updates
