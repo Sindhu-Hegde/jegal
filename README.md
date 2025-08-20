@@ -151,11 +151,11 @@ For the examples provided, the following heatmaps are obtained:
   <tr>
     <td align="center">
       Sample-1<br>
-      <img src="assets/heatmap_sample1.png" height="55px" width="400px"/>
+      <img src="assets/heatmap_sample1.png" height="75px" width="400px"/>
     </td>
     <td align="center">
       Sample-2<br>
-      <img src="assets/heatmap_sample2.png" height="55px" width="400px"/>
+      <img src="assets/heatmap_sample2.png" height="75px" width="400px"/>
     </td>
   </tr>
 </table>
