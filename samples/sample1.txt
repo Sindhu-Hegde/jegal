@@ -1,0 +1,12 @@
+Text:  amount of numbers inside the hat, mixing the
+Lang: en
+
+WORD, START, END, SCORE
+amount, 0.031, 0.255, 0.572
+of, 0.276, 0.357, 0.257
+numbers, 0.377, 0.642, 0.891
+inside, 0.683, 0.948, 0.902
+the, 0.968, 1.07, 0.712
+hat,, 1.091, 1.294, 0.907
+mixing, 1.722, 2.048, 0.807
+the, 2.089, 2.15, 0.808

@@ -1,9 +1,8 @@
-import os, argparse, pickle, subprocess, cv2
-import pandas as pd
+import sys, os, argparse, pickle, subprocess, cv2
 import numpy as np
 import random
 from shutil import rmtree, copy
-from tqdm import tqdm
+
 from scipy.interpolate import interp1d
 from scipy import signal
 
@@ -11,27 +10,20 @@ from ultralytics import YOLO
 import mediapipe as mp
 from protobuf_to_dict import protobuf_to_dict
 
-
 import warnings
 warnings.filterwarnings("ignore")
 warnings.filterwarnings('ignore', category=UserWarning)
 warnings.filterwarnings("ignore", message="Feedback manager requires a model with a single signature inference")
 
 parser = argparse.ArgumentParser(description="Code to preprocess the videos and obtain target speaker crops")
-parser.add_argument('--file', type=str, required=True, help='Path of the csv file')
-parser.add_argument('--data_root', type=str, required=True, help='Path of the folder containing full uncropped videos')
-parser.add_argument('--preprocessed_root', type=str, required=True, help='Path to save the output crops')
-parser.add_argument('--temp_dir', type=str, required=True, help='Path to save intermediate results')
-parser.add_argument('--metadata_root', type=str, required=True, help='Path to save metadata files')
-parser.add_argument('--save_merged', type=str, default="True", help='Choice to save merged audio-video files')
-parser.add_argument('--merge_output_dir', type=str, required=False, help='Path to save the audio-video merged output')
+parser.add_argument('--video_file', type=str, required=True, help='Path of the video file to be pre-processed')
+parser.add_argument('--preprocessed_root', type=str, required=False, default="results", help='Path to save the output crops')
 
 parser.add_argument('--crop_scale', type=float, default=0, help='Scale bounding box')
 parser.add_argument('--min_track', type=int, default=10, help='Minimum facetrack duration')
 parser.add_argument('--min_frame_size', type=int, default=64, help='Minimum frame size in pixels')
 parser.add_argument('--num_failed_det', type=int, default=25, help='Number of missed detections allowed before tracking is stopped')
 parser.add_argument('--frame_rate', type=int, default=25, help='Frame rate')
-
 opt = parser.parse_args()
 
 # Set random seeds
@@ -301,7 +293,7 @@ def detect_speaker(opt, padding=5, work_dir=None):
 		return alltracks
 
 	else:
-		print("Num. of frames = {} | Num. of detections = {}".format(fidx, len(dets)))
+		# print("Num. of frames = {} | Num. of detections = {}".format(fidx, len(dets)))
 		return None
 
 
@@ -405,29 +397,20 @@ def crop_video(opt, track, cropfile, tight_scale=0.9):
 	return {'track': track, 'proc_track': dets}
 
 
-def process_video(file, initial_data_path):
+def process_video(file, preprocessed_root):
 
 	'''
 	This function processes the video
 
 	Args:
 		- file (str): Path to the video file.
-		- initial_data_path (str): Path to save the initial data.
+		- preprocessed_root (str): Path to save the preprocessed data.
 	'''
 
-	global save_count, err_count
-
-	video_name = file.split('/')[-1]
-	sd_dest_folder = os.path.join(initial_data_path, video_name[:-4])
-	work_dest_folder = os.path.join(opt.metadata_root, video_name[:-4])
-
-	if os.path.exists(os.path.join(work_dest_folder, 'tracks.pkl')) and os.path.exists(sd_dest_folder):
-		if len(os.listdir(sd_dest_folder)) > 0:
-			save_count += 1
-			return
+	folder_name = "preprocessed"
+	dest_folder = os.path.join(preprocessed_root, folder_name)
 
 
-	print("Processing video: ", file)
 	setattr(opt, 'videofile', file)
 
 	if os.path.exists(opt.work_dir):
@@ -450,8 +433,7 @@ def process_video(file, initial_data_path):
 	os.makedirs(opt.avi_dir)
 	os.makedirs(opt.frames_dir)
 	os.makedirs(opt.tmp_dir)
-	os.makedirs(sd_dest_folder, exist_ok=True)
-	os.makedirs(work_dest_folder, exist_ok=True)
+	os.makedirs(dest_folder, exist_ok=True)
 
 	# Extract the video and convert it to 25 FPS from the input video file
 	command = ("ffmpeg -hide_banner -loglevel panic -y -i %s -qscale:v 2 -async 1 -r 25 %s" % (opt.videofile,
@@ -460,7 +442,6 @@ def process_video(file, initial_data_path):
 	output = subprocess.call(command, shell=True, stdout=None)
 	if output != 0:
 		print("Failed to extract video from ", file)
-		err_count += 1
 		return
 
 
@@ -471,95 +452,43 @@ def process_video(file, initial_data_path):
 	output = subprocess.call(command, shell=True, stdout=None)
 	if output != 0:
 		print("Failed to extract audio from ", file)
-		err_count += 1
 		return
 
 	# Detect the speaker in the video using YOLOv9 model
-	spk_tracks = detect_speaker(opt, work_dir=work_dest_folder)
+	spk_tracks = detect_speaker(opt, work_dir=dest_folder)
 	if spk_tracks is None:
 		print("No tracks found for ", file)
-		err_count += 1
 		return
 
 
 	# Crop the video based on the detected bounding boxes
 	vidtracks = []
 	for ii, track in enumerate(spk_tracks):
-		vidtracks.append(crop_video(opt, track, os.path.join(sd_dest_folder, '%05d' % ii)))
+		vidtracks.append(crop_video(opt, track, os.path.join(dest_folder, '%05d' % ii)))
 
-	savepath = os.path.join(work_dest_folder, 'tracks.pkl')
+	savepath = os.path.join(dest_folder, 'tracks.pkl')
 	with open(savepath, 'wb') as fil:
 		pickle.dump(vidtracks, fil)
 
 	# Clean up the temporary directories
-	rmtree(opt.tmp_dir)
-	rmtree(opt.avi_dir)
-	rmtree(opt.frames_dir)
+	rmtree(opt.temp_dir)
 
-	print("Saved processed video...")
-	save_count += 1
+	print(f"Saved processed video at: {dest_folder}")
 
 
-def filter_and_merge(csv_path, initial_data_path, final_data_path, merged_path):
-
-	'''
-	This function filters and merges the audio and video
-
-	Args:
-		- csv_path (str): Path to the dataset csv file.
-		- initial_data_path (str): Path to the initial data.
-		- final_data_path (str): Path to save the final data (saves .avi and .wav files).
-		- merged_path (str): Path to save the merged data (saves .mp4 files).
-	'''
-	
-	df = pd.read_csv(csv_path)
-	print("Merging audio and video for visualization...")
-
-	for idx in tqdm(range(len(df))):
-		row = df.iloc[idx]
-		video = os.path.join(initial_data_path, row["filename"] + ".avi")
-		audio = video.replace(".avi", ".wav")
-
-		video_output = video.replace(initial_data_path, final_data_path)
-		audio_output = audio.replace(initial_data_path, final_data_path)
-		fname = video.split("/")[-2] + "_" + video.split("/")[-1].split(".")[0]
-		merged_output = os.path.join(merged_path, str(idx)+"_"+fname+".mp4")
-
-		# Merge the audio and video
-		status = subprocess.call('ffmpeg -hide_banner -loglevel panic -threads 1 -y -i %s -i %s -strict -2 -q:v 1 %s' %
-					(audio, video, merged_output), shell=True)
-		if status != 0:
-			print("Failed to merge audio and video for ", video)
-			continue
-
-		# Copy the target video to the final data path
-		video_output_folder = os.path.join(final_data_path, video_output.split("/")[-2])
-		if not os.path.exists(video_output_folder):
-			os.makedirs(video_output_folder)
-		status = subprocess.call('rsync -az %s %s' % (video, video_output), shell=True)
-		if status != 0:
-			print("Failed to copy video for ", video)
-			continue
-
-		# Copy the target audio to the final data path
-		status = subprocess.call('rsync -az %s %s' % (audio, audio_output), shell=True)
-		if status != 0:
-			print("Failed to copy audio for ", audio)
-			continue
 
 
 if __name__ == "__main__":
 
-	# Get the list of videos to process
-	filelist = pd.read_csv(opt.file)["filename"].tolist()
-	files = [os.path.join(opt.data_root, f.split("/")[0] + ".mp4") for f in filelist]
-	print(f"A total of {len(files)} files found.")
+	file = opt.video_file
+	fname = file.split("/")[-1].split(".")[0]
+	print(f"Processing video: {file}")
 
 	# Create the necessary directories
-	initial_data_path = opt.preprocessed_root+"_all"
-	os.makedirs(initial_data_path, exist_ok=True)
+	opt.preprocessed_root = os.path.join(opt.preprocessed_root, fname)
+	opt.temp_dir = os.path.join(opt.preprocessed_root, "temp")
 	os.makedirs(opt.preprocessed_root, exist_ok=True)
-	os.makedirs(opt.metadata_root, exist_ok=True)
+	os.makedirs(opt.temp_dir, exist_ok=True)
 
 	# Set the necessary attributes
 	setattr(opt, 'avi_dir', os.path.join(opt.temp_dir, 'pyavi'))
@@ -567,15 +496,8 @@ if __name__ == "__main__":
 	setattr(opt, 'work_dir', os.path.join(opt.temp_dir, 'pywork'))
 	setattr(opt, 'crop_dir', os.path.join(opt.temp_dir, 'pycrop'))
 	setattr(opt, 'frames_dir', os.path.join(opt.temp_dir, 'pyframes'))
-	setattr(opt, 'audio_dir', None)
 
 
-	# Process the videos
-	prog_bar = tqdm(files)
-	for file in prog_bar:
-		process_video(file, initial_data_path)
-		prog_bar.set_description(f"Saved files: {save_count} | Failed files: {err_count}")
+	# Process the video
+	process_video(file, opt.preprocessed_root)
 
-	if opt.save_merged=="True":
-		os.makedirs(opt.merge_output_dir, exist_ok=True)
-		filter_and_merge(opt.file, initial_data_path, opt.preprocessed_root, opt.merge_output_dir)

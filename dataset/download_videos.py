@@ -1,13 +1,8 @@
 import argparse
 import pandas as pd
-import numpy as np
 import os, subprocess
 from tqdm import tqdm
-import math
-
 import traceback
-import executor
-import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import warnings
@@ -17,13 +12,12 @@ os.environ["LC_ALL"]="en_US.utf-8"
 os.environ["LANG"]="en_US.utf-8"
 
 parser = argparse.ArgumentParser(description="Code to download the videos from the input csv file")
-parser.add_argument('--file', type=str, required=True, help="Path to the input csv file")
-parser.add_argument('--video_root', type=str, required=True, help="Path to the directory to save the videos")
-
+parser.add_argument('--file', required=False, default="avs_spot.csv")
+parser.add_argument('--video_root', type=str, default="videos")
 args = parser.parse_args()
 
 def is_valid_video(file_path):
-    
+	
 	'''
 	This function validates the video file using the following checks:
 		(i) Check if duration > 0
@@ -36,31 +30,24 @@ def is_valid_video(file_path):
 	'''
 
 	if not os.path.exists(file_path):
-        return False  # File does not exist
+		return False  # File does not exist
 
-    # Use ffmpeg to get duration
-    try:
-        result = subprocess.run(
-            ["ffmpeg", "-i", file_path, "-f", "null", "-"],
-            stdout=subprocess.DEVNULL, 
-            stderr=subprocess.DEVNULL  
-        )
-        return result.returncode == 0  # If return code is 0, it's a valid video
-    except Exception:
-        return False  # If ffmpeg fails, assume it's invalid
+	# Use ffmpeg to get duration
+	try:
+		result = subprocess.run(
+			["ffmpeg", "-i", file_path, "-f", "null", "-"],
+			stdout=subprocess.DEVNULL, 
+			stderr=subprocess.DEVNULL  
+		)
+		valid = result.returncode == 0  # If return code is 0, it's a valid video
+		if not valid:
+			print(f"Invalid video (ffmpeg failed): {file_path}")
+			os.remove(file_path)
+			return False
+	except Exception:
+		return False  # If ffmpeg fails, assume it's invalid
 
-	# Check if audio exists
-    cmd_audio = f'ffmpeg -i "{video_path}" -map 0:a:0 -f null - 2>&1 | grep "Output"'
-    try:
-        audio_output = subprocess.check_output(cmd_audio, shell=True, text=True)
-        if not audio_output.strip():
-            print(f"Invalid video (no audio): {video_path}")
-            os.remove(video_path)
-            return False
-    except Exception:
-        print(f"Error checking audio: {video_path}")
-        os.remove(video_path)
-        return False
+	return True
 
 
 def mp_handler(i, df, result_dir):
@@ -73,6 +60,8 @@ def mp_handler(i, df, result_dir):
 		- df (pd.DataFrame): DataFrame containing the video information.
 		- result_dir (str): Directory to save the video.
 	'''
+
+	cookies_files = "cookies.txt"
 
 	try:
 		data = df.iloc[i]
@@ -89,17 +78,19 @@ def mp_handler(i, df, result_dir):
 	
 		if os.path.exists(output_fname):
 			# Validate file
-			if is_valid_video(output_fname):
-				return
+			# if is_valid_video(output_fname):
+			# 	return
+			return
 
 		# Download the video
-		cmd = "yt-dlp --geo-bypass -f b --download-sections {} --format=mp4 -o {} {}".format(time, output_fname, video_link)
+		# cmd = "yt-dlp --geo-bypass --download-sections {} --format=mp4 -o {} {}".format(time, output_fname, video_link)
+		cmd = "yt-dlp --no-cache-dir --cookies {} --geo-bypass --download-sections {} --format=mp4 -o {} {}".format(cookies_files, time, output_fname, video_link)
 		subprocess.call(cmd, shell=True)
 
 		# Validate file and delete if invalid
 		if not is_valid_video(output_fname):
 			print(f"Invalid file detected: {output_fname}. Deleting...")
-			os.remove(output_fname)
+			# os.remove(output_fname)
 
 	except KeyboardInterrupt:
 		exit(0)
@@ -115,13 +106,13 @@ def download_data(args):
 		- args (argparse.Namespace): Arguments.
 	'''
 
-    # Load the dataset csv file with annotations
-    df = pd.read_csv(args.file)
+	# Read the csv file
+	df = pd.read_csv(args.file)[::-1]
 	print("Total files: ", len(df))
 
 	# Create the result directory
-	if not os.path.exists(args.result_dir):
-		os.makedirs(args.result_dir)
+	if not os.path.exists(args.video_root):
+		os.makedirs(args.video_root)
 
 	# Create the multiprocessing pool and submit the jobs to download the videos
 	jobs = [idx for idx in range(len(df))]

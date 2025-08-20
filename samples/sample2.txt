@@ -1,0 +1,11 @@
+Text:  merging the two diseases, arthritis deformans and
+Lang: en
+
+WORD, START, END, SCORE
+merging, 0.01, 0.28, 0.833
+the, 0.30, 0.38, 0.793
+two, 0.421, 0.561, 0.899
+diseases,, 0.621, 1.082, 0.919
+arthritis, 1.423, 1.784, 0.611
+deformans, 1.804, 2.385, 0.762
+and, 2.566, 2.646, 0.963
