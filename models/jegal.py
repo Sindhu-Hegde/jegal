@@ -1,14 +1,11 @@
 import torch
 import torch.nn as nn
-from torch.autograd import Variable
-import math, copy
+import copy
 import random
 
 from models.modules import *
 from transformers import AutoTokenizer, XLMRobertaModel
 
-from einops.layers.torch import Rearrange
-from einops import rearrange
 
 tokenizer = AutoTokenizer.from_pretrained("xlm-roberta-base")
 mroberta = XLMRobertaModel.from_pretrained("xlm-roberta-base")
@@ -286,7 +283,7 @@ class JEGAL(nn.Module):
 				audio_emb = torch.zeros_like(text_emb).cuda()  # Drop audio
 			else:
 				# print("Text dropped")
-				audio_emb_frames = self.forward_audio(audio, audio_mask)
+				audio_emb_frames = self.forward_audio(audio, audio_mask.unsqueeze(1))
 				audio_emb_words, invalid_sample_idx = self.get_audio_word_level_embs(audio_emb_frames, word_boundaries)
 				audio_emb, content_mask = self.pad_wordlevel_embs(audio_emb_words)
 				text_emb = torch.zeros_like(audio_emb).cuda()  # Drop text
@@ -296,9 +293,9 @@ class JEGAL(nn.Module):
 			# print("No content dropped")
 			text_emb_roberta, text_mask, text_batch, input_ids, offset_mapping = self.get_roberta_embeddings(text)
 			text_emb_subwords = self.forward_text(text_emb_roberta, text_mask.unsqueeze(1).cuda())
-			audio_emb_frames = self.forward_audio(audio, audio_mask)
+			audio_emb_frames = self.forward_audio(audio, audio_mask.unsqueeze(1))
 
-			text_emb_words, audio_emb_words, invalid_sample_idx = self.get_word_level_embs(text_attn_subwords, text_batch, input_ids, offset_mapping, audio_attn_frames, word_boundaries)
+			text_emb_words, audio_emb_words, invalid_sample_idx = self.get_word_level_embs(text_emb_subwords, text_batch, input_ids, offset_mapping, audio_emb_frames, word_boundaries)
 			text_emb, content_mask = self.pad_wordlevel_embs(text_emb_words)
 			audio_emb, _ = self.pad_wordlevel_embs(audio_emb_words)
 			
@@ -337,10 +334,10 @@ class JEGAL(nn.Module):
 			text_emb_roberta, text_mask, text_batch, input_ids, offset_mapping = self.get_roberta_embeddings(text)
 			text_emb_subwords = self.forward_text(text_emb_roberta, text_mask.unsqueeze(1).cuda())
 			text_emb_words, _, invalid_sample_idx = self.get_word_level_embs(text_emb_subwords, text_batch, input_ids, offset_mapping, audio_emb=None, word_boundaries=None)
-			text_attn, content_mask = self.pad_wordlevel_embs(text_emb_words)
+			text_emb, content_mask = self.pad_wordlevel_embs(text_emb_words)
 
 		if audio is not None:
-			audio_emb_frames = self.forward_audio(audio, audio_mask)
+			audio_emb_frames = self.forward_audio(audio, audio_mask.unsqueeze(1))
 			audio_emb_words, invalid_sample_idx = self.get_audio_word_level_embs(audio_emb_frames, word_boundaries, invalid_sample_idx)
 			audio_emb, content_mask = self.pad_wordlevel_embs(audio_emb_words)
 
@@ -377,44 +374,44 @@ class JEGAL(nn.Module):
 	def forward_inference(self, visual_feats=None, visual_mask=None, text=None, audio=None, audio_mask=None, word_boundaries=None):
 
 		if visual_feats is not None:		
-			gesture_attn = self.forward_gestures(visual_feats, visual_mask.unsqueeze(1))
-			gesture_attn = self.proj_op_align_gesture(gesture_attn)
-			# print("Gesture attn: {}".format(gesture_attn.shape))							# BxTx512
+			gesture_emb = self.forward_gestures(visual_feats, visual_mask.unsqueeze(1))
+			gesture_emb = self.proj_op_align_gesture(gesture_emb)
+			# print("Gesture attn: {}".format(gesture_emb.shape))							# BxTx512
 			
 			# Return gesture output if content embedding is not required
 			if text is None and audio is None:
-				return gesture_attn
+				return gesture_emb
 
 		if text is not None:
-			text_feats, text_mask, text_batch, input_ids, offset_mapping = self.get_roberta_embeddings(text)
-			text_attn_subwords = self.forward_text(text_feats, text_mask.unsqueeze(1).cuda())
-			word_text_emb, _, _ = self.get_word_level_embs(text_attn_subwords, text_batch, input_ids, offset_mapping, audio_emb=None, word_boundaries=None)
-			text_attn, content_mask = self.pad_wordlevel_embs(word_text_emb)
+			text_feattext_emb_roberta, text_mask, text_batch, input_ids, offset_mapping = self.get_roberta_embeddings(text)
+			text_emb_subwords = self.forward_text(text_feattext_emb_roberta, text_mask.unsqueeze(1).cuda())
+			text_emb_words, _, _ = self.get_word_level_embs(text_emb_subwords, text_batch, input_ids, offset_mapping, audio_emb=None, word_boundaries=None)
+			text_emb, content_mask = self.pad_wordlevel_embs(text_emb_words)
 			if audio is None:
-				audio_attn = torch.zeros_like(text_attn)
-			# print("Text attn: {}".format(text_attn.shape))								# BxNx256
+				audio_emb = torch.zeros_like(text_emb)
+			# print("Text emb: {}".format(text_emb.shape))								# BxNx256
 
 		if audio is not None:
-			audio_attn_frames = self.forward_audio(audio, audio_mask.unsqueeze(1))
-			word_audio_emb, _ = self.get_audio_word_level_embs(audio_attn_frames, word_boundaries)
-			audio_attn, content_mask = self.pad_wordlevel_embs(word_audio_emb)
+			audio_emb_frames = self.forward_audio(audio, audio_mask.unsqueeze(1))
+			audio_emb_words, _ = self.get_audio_word_level_embs(audio_emb_frames, word_boundaries)
+			audio_emb, content_mask = self.pad_wordlevel_embs(audio_emb_words)
 			if text is None:
-				text_attn = torch.zeros_like(audio_attn)				
-			# print("Audio attn: {}".format(audio_attn.shape))								# BxNx256
+				text_emb = torch.zeros_like(audio_emb)				
+			# print("Audio emb: {}".format(audio_emb.shape))								# BxNx256
 		
 
 		# Fuse the content embeddings
 		if self.fusion_strategy == 'concat':
-			content_fused_attn = torch.cat((audio_attn, text_attn), dim=-1)
+			content_emb = torch.cat((audio_emb, text_emb), dim=-1)
 		elif self.fusion_strategy == 'avg':
-			content_fused_attn = (audio_attn + text_attn) / 2
-		# print("Content fused attn: {}".format(content_fused_attn.shape))				# BxNx512
+			content_emb = (audio_emb + text_emb) / 2
+		# print("Content fused emb: {}".format(content_emb.shape))				# BxNx512
 	
 		# Content projection
-		content_attn = self.proj_op_fusion_content(content_fused_attn)
-		content_attn = self.proj_op_align_content(content_attn)
+		content_emb = self.proj_op_fusion_content(content_emb)
+		content_emb = self.proj_op_align_content(content_emb)
 
 		if visual_feats is None:
-			return content_attn
+			return content_emb
 		else:
-			return gesture_attn, content_attn
+			return gesture_emb, content_emb

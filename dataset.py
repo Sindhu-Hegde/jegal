@@ -41,6 +41,12 @@ class DataGenerator_Train(data.Dataset):
 			return None
 
 
+		# Load text
+		text, start_frame, end_frame, word_boundaries = self.load_text(text_fname)
+		if text is None:
+			return None
+
+
 		# Load visual features (pre-trained GestSync features)
 		gestsync_fname = os.path.join(self.feature_dir, file+".npy")
 		visual_feats, visual_mask = self.load_visual_feats(gestsync_fname, start_frame, end_frame)
@@ -48,11 +54,7 @@ class DataGenerator_Train(data.Dataset):
 			return None
 		visual_feats = torch.FloatTensor(np.array(visual_feats))
 
-		# Load text
-		text, start_frame, end_frame, word_boundaries = self.load_text(text_fname)
-		if text is None:
-			return None
-
+		
 		# Load audio		
 		audio, audio_mask = self.load_audio(audio_fname, start_frame, end_frame)
 		if audio is None:
