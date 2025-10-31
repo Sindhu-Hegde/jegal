@@ -52,11 +52,23 @@ FFmpeg is also needed, install if not already present using: `sudo apt-get insta
 ## Checkpoints
 
 Download the trained models and save in `checkpoints` folder
+```
+mkdir checkpoints
+cd checkpoints
+
+#### Visual Feature Extractor (GestSync)
+wget https://www.robots.ox.ac.uk/~vgg/research/jegal/checkpoints/gestsync.pth
+
+#### Gesture model (JEGAL)
+wget https://www.robots.ox.ac.uk/~vgg/research/jegal/checkpoints/jegal.pth
+```
+
+Alternatively, the links are also displayed in the table below:
 
 |Model|Download Link|
 |:--:|:--:|
 | Visual Feature Extractor (GestSync) | [Link](https://www.robots.ox.ac.uk/~vgg/research/jegal/checkpoints/gestsync.pth)  |
-| Gesture model (JEGAL) | [Link](https://https://www.robots.ox.ac.uk/~vgg/research/jegal/checkpoints/jegal.pth) |
+| Gesture model (JEGAL) | [Link](https://www.robots.ox.ac.uk/~vgg/research/jegal/checkpoints/jegal.pth) |
 
 
 ## Inference on a real-world video
